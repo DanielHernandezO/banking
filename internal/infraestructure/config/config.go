@@ -10,8 +10,13 @@ import (
 var properties map[string]string
 
 var (
-	Port     = "port"
-	Location = "files_location"
+	Port           = "port"
+	Location       = "files_location"
+	DatabaseUser   = "database_user"
+	DatabasePass   = "database_pass"
+	DatabaseSquema = "database_squema"
+	DatabaseHost   = "database_host"
+	DatabasePort   = "database_port"
 )
 
 func LoadConfigs() {
