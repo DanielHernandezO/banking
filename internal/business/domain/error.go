@@ -3,8 +3,8 @@ package domain
 import "net/http"
 
 type AppError struct {
-	Code    int
-	Message string
+	Code    int    `json:"id" `
+	Message string `json:"message"`
 }
 
 func NewNotFoundError(message string) *AppError {

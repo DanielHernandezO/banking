@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -29,11 +28,9 @@ func (c *customerHandler) GetAllCutomers(w http.ResponseWriter, r *http.Request)
 	Customer, usecaseErr := c.customerUsecase.FindAll()
 
 	if usecaseErr != nil {
-		w.WriteHeader(usecaseErr.Code)
-		fmt.Fprintf(w, "Error: %v", usecaseErr.Message)
+		writeResponse(w, usecaseErr.Code, usecaseErr)
 	} else {
-		w.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Customer)
+		writeResponse(w, http.StatusOK, Customer)
 	}
 }
 
@@ -49,10 +46,16 @@ func (c *customerHandler) GetCustomer(w http.ResponseWriter, r *http.Request) {
 
 	customer, usecaseErr := c.customerUsecase.GetCustomer(customerID)
 	if usecaseErr != nil {
-		w.WriteHeader(usecaseErr.Code)
-		fmt.Fprintf(w, "Error: %v", usecaseErr.Message)
+		writeResponse(w, usecaseErr.Code, usecaseErr)
 	} else {
-		w.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(customer)
+		writeResponse(w, http.StatusOK, customer)
+	}
+}
+
+func writeResponse(w http.ResponseWriter, code int, data interface{}) {
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		panic(err)
 	}
 }
