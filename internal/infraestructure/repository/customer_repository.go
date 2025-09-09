@@ -38,12 +38,12 @@ func setUpMysqlDriver() *sql.DB {
 	return mysqlClient
 }
 
-func (c customerRepository) FindAll() ([]domain.Customer, error) {
+func (c customerRepository) FindAll() ([]domain.Customer, *domain.AppError) {
 	findAllSql := "SELECT customer_id, name, city, zipcode, date_of_birth, status FROM customers"
 	rows, err := c.mysqlClient.Query(findAllSql)
 	if err != nil {
 		log.Println("Error querying customers:", err.Error())
-		return nil, err
+		return nil, domain.NewUnexpectedError("unexpected database error")
 	}
 
 	var customers []domain.Customer
@@ -52,9 +52,25 @@ func (c customerRepository) FindAll() ([]domain.Customer, error) {
 		err := rows.Scan(&customer.Id, &customer.Name, &customer.City, &customer.ZipCode, &customer.DateOfBirth, &customer.Status)
 		if err != nil {
 			log.Println("Error scanning customer:", err.Error())
-			return nil, err
+			return nil, domain.NewUnexpectedError("unexpected database error")
 		}
 		customers = append(customers, customer)
 	}
 	return customers, nil
+}
+
+func (c customerRepository) ById(id int) (*domain.Customer, *domain.AppError) {
+	findByIdSql := "SELECT customer_id, name, city, zipcode, date_of_birth, status FROM customers WHERE customer_id = ?"
+	row := c.mysqlClient.QueryRow(findByIdSql, id)
+
+	var customer domain.Customer
+	err := row.Scan(&customer.Id, &customer.Name, &customer.City, &customer.ZipCode, &customer.DateOfBirth, &customer.Status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, domain.NewNotFoundError("customer not found")
+		}
+		log.Println("Error scanning customer by ID:", err.Error())
+		return nil, domain.NewUnexpectedError("unexpected database error")
+	}
+	return &customer, nil
 }

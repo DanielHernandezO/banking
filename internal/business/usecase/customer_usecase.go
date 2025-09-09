@@ -6,7 +6,8 @@ import (
 )
 
 type CustomerUsecase interface {
-	FindAll() ([]domain.Customer, error)
+	FindAll() ([]domain.Customer, *domain.AppError)
+	GetCustomer(id int) (*domain.Customer, *domain.AppError)
 }
 
 type customerUsecase struct {
@@ -19,10 +20,10 @@ func NewCustomerUsecase(customerRepository gateway.CustomerGateway) *customerUse
 	}
 }
 
-func (s *customerUsecase) FindAll() ([]domain.Customer, error) {
-	users, err := s.customerRepository.FindAll()
-	if err != nil {
-		return nil, err
-	}
-	return users, nil
+func (s *customerUsecase) FindAll() ([]domain.Customer, *domain.AppError) {
+	return s.customerRepository.FindAll()
+}
+
+func (s *customerUsecase) GetCustomer(id int) (*domain.Customer, *domain.AppError) {
+	return s.customerRepository.ById(id)
 }
