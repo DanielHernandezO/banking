@@ -42,7 +42,6 @@ func LoadConfigs() {
 	if err := scanner.Err(); err != nil {
 		log.Fatalf("Error loading configurations: %v", err)
 	}
-	log.Println("Configurations loaded successfully")
 }
 
 func GetStringPropetyBykey(key string) string {

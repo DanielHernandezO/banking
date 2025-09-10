@@ -3,20 +3,22 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/DanielHernandezO/banking/internal/business/domain"
+	"github.com/DanielHernandezO/banking/internal/business/gateway"
 	"github.com/DanielHernandezO/banking/internal/infraestructure/config"
 )
 
 type customerRepository struct {
-	mysqlClient *sql.DB
+	mysqlClient     *sql.DB
+	loggerCollector gateway.LoggerGateway
 }
 
-func NewCustomerRepository() *customerRepository {
+func NewCustomerRepository(loggerCollector gateway.LoggerGateway) *customerRepository {
 	return &customerRepository{
-		mysqlClient: setUpMysqlDriver(),
+		mysqlClient:     setUpMysqlDriver(),
+		loggerCollector: loggerCollector,
 	}
 }
 
@@ -42,7 +44,7 @@ func (c customerRepository) FindAll() ([]domain.Customer, *domain.AppError) {
 	findAllSql := "SELECT customer_id, name, city, zipcode, date_of_birth, status FROM customers"
 	rows, err := c.mysqlClient.Query(findAllSql)
 	if err != nil {
-		log.Println("Error querying customers:", err.Error())
+		c.loggerCollector.Error("Error querying customers: " + err.Error())
 		return nil, domain.NewUnexpectedError("unexpected database error")
 	}
 
@@ -51,7 +53,7 @@ func (c customerRepository) FindAll() ([]domain.Customer, *domain.AppError) {
 		var customer domain.Customer
 		err := rows.Scan(&customer.Id, &customer.Name, &customer.City, &customer.ZipCode, &customer.DateOfBirth, &customer.Status)
 		if err != nil {
-			log.Println("Error scanning customer:", err.Error())
+			c.loggerCollector.Error("Error scanning customer: " + err.Error())
 			return nil, domain.NewUnexpectedError("unexpected database error")
 		}
 		customers = append(customers, customer)
@@ -67,9 +69,10 @@ func (c customerRepository) ById(id int) (*domain.Customer, *domain.AppError) {
 	err := row.Scan(&customer.Id, &customer.Name, &customer.City, &customer.ZipCode, &customer.DateOfBirth, &customer.Status)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			c.loggerCollector.Info(fmt.Sprintf("Customer with ID %d not found", id))
 			return nil, domain.NewNotFoundError("customer not found")
 		}
-		log.Println("Error scanning customer by ID:", err.Error())
+		c.loggerCollector.Error("Error scanning customer by ID: " + err.Error())
 		return nil, domain.NewUnexpectedError("unexpected database error")
 	}
 	return &customer, nil
