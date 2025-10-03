@@ -8,10 +8,11 @@ import (
 	"github.com/DanielHernandezO/banking/internal/business/domain"
 	"github.com/DanielHernandezO/banking/internal/business/gateway"
 	"github.com/DanielHernandezO/banking/internal/infraestructure/config"
+	"github.com/jmoiron/sqlx"
 )
 
 type customerRepository struct {
-	mysqlClient     *sql.DB
+	mysqlClient     *sqlx.DB
 	loggerCollector gateway.LoggerGateway
 }
 
@@ -22,14 +23,14 @@ func NewCustomerRepository(loggerCollector gateway.LoggerGateway) *customerRepos
 	}
 }
 
-func setUpMysqlDriver() *sql.DB {
+func setUpMysqlDriver() *sqlx.DB {
 	databaseUser := config.GetStringPropetyBykey(config.DatabaseUser)
 	databasePassword := config.GetStringPropetyBykey(config.DatabasePass)
 	databaseHost := config.GetStringPropetyBykey(config.DatabaseHost)
 	databasePort := config.GetStringPropetyBykey(config.DatabasePort)
 	databaseSquema := config.GetStringPropetyBykey(config.DatabaseSquema)
 
-	mysqlClient, err := sql.Open("mysql", fmt.Sprintf("%s:%s@(%s:%s)/%s", databaseUser, databasePassword, databaseHost, databasePort, databaseSquema))
+	mysqlClient, err := sqlx.Open("mysql", fmt.Sprintf("%s:%s@(%s:%s)/%s", databaseUser, databasePassword, databaseHost, databasePort, databaseSquema))
 	if err != nil {
 		panic(err)
 	}
@@ -41,32 +42,22 @@ func setUpMysqlDriver() *sql.DB {
 }
 
 func (c customerRepository) FindAll() ([]domain.Customer, *domain.AppError) {
+	var customers []domain.Customer
 	findAllSql := "SELECT customer_id, name, city, zipcode, date_of_birth, status FROM customers"
-	rows, err := c.mysqlClient.Query(findAllSql)
+
+	err := c.mysqlClient.Select(&customers, findAllSql)
 	if err != nil {
 		c.loggerCollector.Error("Error querying customers: " + err.Error())
 		return nil, domain.NewUnexpectedError("unexpected database error")
-	}
-
-	var customers []domain.Customer
-	for rows.Next() {
-		var customer domain.Customer
-		err := rows.Scan(&customer.Id, &customer.Name, &customer.City, &customer.ZipCode, &customer.DateOfBirth, &customer.Status)
-		if err != nil {
-			c.loggerCollector.Error("Error scanning customer: " + err.Error())
-			return nil, domain.NewUnexpectedError("unexpected database error")
-		}
-		customers = append(customers, customer)
 	}
 	return customers, nil
 }
 
 func (c customerRepository) ById(id int) (*domain.Customer, *domain.AppError) {
-	findByIdSql := "SELECT customer_id, name, city, zipcode, date_of_birth, status FROM customers WHERE customer_id = ?"
-	row := c.mysqlClient.QueryRow(findByIdSql, id)
-
 	var customer domain.Customer
-	err := row.Scan(&customer.Id, &customer.Name, &customer.City, &customer.ZipCode, &customer.DateOfBirth, &customer.Status)
+	findByIdSql := "SELECT customer_id, name, city, zipcode, date_of_birth, status FROM customers WHERE customer_id = ?"
+
+	err := c.mysqlClient.Get(&customer, findByIdSql, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.loggerCollector.Info(fmt.Sprintf("Customer with ID %d not found", id))
